@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>研途助手 · 考研择校与复习进度管理</title>
+
+  <!-- 引入样式表（相对路径） -->
+  <link rel="stylesheet" href="style.css" />
+
+  <!--
+    引入 Chart.js（国内可稳定访问的 CDN：BootCDN）
+    onerror 表示主 CDN 加载失败时自动切换到备用 CDN（字节跳动静态资源）
+    所有资源均为公共 CDN，可在 GitHub Pages 正常加载
+  -->
+  <script src="https://cdn.bootcdn.net/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"
+          onerror="this.onerror=null;this.src='https://lf6-cdn-tos.bytecdntp.com/cdn/expire-1-M/Chart.js/4.4.1/chart.umd.min.js';"></script>
+</head>
+<body>
+
+  <!-- ===== 顶部标题区 ===== -->
+  <header class="site-header">
+    <div class="container">
+      <h1>🎓 研途助手</h1>
+      <p>考研择校规划 · 复习进度管理 · 数据看板（纯前端演示工具）</p>
+    </div>
+  </header>
+
+  <main class="container">
+
+    <!-- ===== 导航标签 ===== -->
+    <nav class="tabs" id="tabs">
+      <button class="tab active" data-tab="school">智能择校</button>
+      <button class="tab" data-tab="progress">复习进度</button>
+      <button class="tab" data-tab="dashboard">数据看板</button>
+    </nav>
+
+    <!-- ===== 页面一：智能择校 ===== -->
+    <section class="panel active" id="panel-school">
+      <h2>智能择校</h2>
+      <p class="hint">选择一个专业并填写相关信息，系统将基于示例院校库，按目标分数把院校分为「冲一冲 / 稳妥 / 保底」三档。</p>
+
+      <!-- 查询表单 -->
+      <form id="schoolForm" class="form-grid">
+        <div class="form-item">
+          <label for="majorSelect">报考专业</label>
+          <select id="majorSelect" required><option value="">加载中…</option></select>
+        </div>
+        <div class="form-item">
+          <label for="scoreInput">目标分数</label>
+          <input type="number" id="scoreInput" value="360" min="0" max="500" required />
+        </div>
+        <div class="form-item">
+          <label for="regionSelect">意向地区</label>
+          <select id="regionSelect"><option value="all">不限</option></select>
+        </div>
+        <div class="form-item">
+          <label for="backgroundSelect">本科背景</label>
+          <select id="backgroundSelect">
+            <option value="双非">双非本科</option>
+            <option value="211">211 本科</option>
+            <option value="985">985 本科</option>
+          </select>
+        </div>
+        <div class="form-item form-item-wide">
+          <label for="preferenceInput">其他偏好（可写地区，如「想去杭州」）</label>
+          <input type="text" id="preferenceInput" placeholder="选填，例如：想去长三角" />
+        </div>
+      </form>
+      <button class="btn btn-primary" id="searchBtn">生成择校建议</button>
+
+      <!-- 结果区 -->
+      <div id="schoolResult" class="result-area">
+        <p class="empty-tip">填写左侧信息后点击「生成择校建议」查看结果。</p>
+      </div>
+    </section>
+
+    <!-- ===== 页面二：复习进度 ===== -->
+    <section class="panel" id="panel-progress">
+      <h2>复习进度</h2>
+      <p class="hint">添加你的复习任务，勾选完成即打卡。所有数据保存在浏览器本地（localStorage），刷新页面不会丢失。</p>
+
+      <!-- 添加任务表单 -->
+      <form id="taskForm" class="form-grid">
+        <div class="form-item">
+          <label for="subjectInput">科目</label>
+          <select id="subjectInput">
+            <option>政治</option><option>英语</option><option>数学</option>
+            <option>专业课</option><option>其他</option>
+          </select>
+        </div>
+        <div class="form-item form-item-wide">
+          <label for="taskInput">任务内容</label>
+          <input type="text" id="taskInput" placeholder="例如：完成高数第一章习题" required />
+        </div>
+        <div class="form-item">
+          <label for="stageInput">阶段</label>
+          <select id="stageInput">
+            <option>基础</option><option>强化</option><option>冲刺</option>
+          </select>
+        </div>
+      </form>
+      <button class="btn btn-primary" id="addTaskBtn">添加任务</button>
+
+      <!-- 进度统计 -->
+      <div class="stat-bar">
+        <div class="stat"><span class="stat-num" id="statTotal">0</span><span class="stat-label">全部任务</span></div>
+        <div class="stat"><span class="stat-num" id="statDone">0</span><span class="stat-label">已完成</span></div>
+        <div class="stat"><span class="stat-num" id="statRate">0%</span><span class="stat-label">完成率</span></div>
+      </div>
+      <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+
+      <!-- 任务列表 -->
+      <table class="task-table" id="taskTable">
+        <thead>
+          <tr><th>完成</th><th>科目</th><th>任务内容</th><th>阶段</th><th>操作</th></tr>
+        </thead>
+        <tbody id="taskListBody"></tbody>
+      </table>
+      <button class="btn btn-ghost" id="clearDoneBtn">清除已完成任务</button>
+    </section>
+
+    <!-- ===== 页面三：数据看板 ===== -->
+    <section class="panel" id="panel-dashboard">
+      <h2>数据看板</h2>
+      <p class="hint">根据复习任务数据自动生成图表，直观查看各科任务分布与阶段进度。</p>
+      <div class="chart-grid">
+        <div class="chart-box"><h3>各科任务数</h3><canvas id="subjectChart"></canvas></div>
+        <div class="chart-box"><h3>任务完成情况</h3><canvas id="doneChart"></canvas></div>
+        <div class="chart-box"><h3>各阶段任务分布</h3><canvas id="stageChart"></canvas></div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- 页脚：免责声明 -->
+  <footer class="site-footer">
+    <div class="container">
+      <p>⚠️ 本项目为课程演示作品，院校分数线、报录比等均为<strong>示例数据</strong>，不构成报考建议。正式报考请以研招网及各院校官方招生简章为准。</p>
+    </div>
+  </footer>
+
+  <!-- 引入主逻辑（相对路径，放在 body 末尾确保 DOM 已加载） -->
+  <script src="main.js"></script>
+</body>
+</html>
